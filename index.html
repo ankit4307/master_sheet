@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My To-Do List</title>
+  <style>
+    :root {
+      --bg: #fbf7f0;
+      --card: #ffffff;
+      --ink: #2b2620;
+      --muted: #9a8f7e;
+      --line: #ece4d6;
+      --accent: #c0563b;
+      --accent-soft: #f3e3dd;
+      --done: #b5ab99;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: "Georgia", "Times New Roman", serif;
+      background: var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 48px 16px;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 480px;
+    }
+
+    header {
+      margin-bottom: 28px;
+    }
+
+    .eyebrow {
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      font-size: 0.72rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+
+    .count {
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    .add-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .add-row input {
+      flex: 1;
+      padding: 13px 16px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      font-size: 1rem;
+      background: var(--card);
+      color: var(--ink);
+    }
+
+    .add-row input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .add-row button {
+      padding: 0 22px;
+      border: none;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .add-row button:hover { background: #a3462f; }
+
+    ul { list-style: none; }
+
+    li {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 15px 4px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .check {
+      width: 22px;
+      height: 22px;
+      border: 2px solid var(--accent);
+      border-radius: 50%;
+      flex-shrink: 0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s ease;
+    }
+
+    .check::after {
+      content: "";
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: transparent;
+      transition: background 0.15s ease;
+    }
+
+    li.done .check { background: var(--accent-soft); }
+    li.done .check::after { background: var(--accent); }
+
+    .title {
+      flex: 1;
+      font-size: 1.05rem;
+      cursor: pointer;
+    }
+
+    li.done .title {
+      text-decoration: line-through;
+      color: var(--done);
+    }
+
+    .delete {
+      border: none;
+      background: none;
+      color: var(--muted);
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 4px 8px;
+      line-height: 1;
+      transition: color 0.15s ease;
+    }
+
+    .delete:hover { color: var(--accent); }
+
+    .empty {
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      color: var(--muted);
+      text-align: center;
+      padding: 40px 0;
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="eyebrow">Today &amp; beyond</div>
+      <h1>My To-Do List</h1>
+      <div class="count" id="count"></div>
+    </header>
+
+    <div class="add-row">
+      <input type="text" id="taskInput" placeholder="What needs doing?" autofocus>
+      <button id="addBtn">Add</button>
+    </div>
+
+    <ul id="taskList"></ul>
+    <p class="empty" id="emptyMsg">Nothing here yet — add your first task above.</p>
+  </div>
+
+  <script>
+    // Load saved tasks from the browser (persist across refreshes)
+    let tasks = JSON.parse(localStorage.getItem("tasks") || "[]");
+
+    const input = document.getElementById("taskInput");
+    const addBtn = document.getElementById("addBtn");
+    const list = document.getElementById("taskList");
+    const emptyMsg = document.getElementById("emptyMsg");
+    const count = document.getElementById("count");
+
+    function save() {
+      localStorage.setItem("tasks", JSON.stringify(tasks));
+    }
+
+    function render() {
+      list.innerHTML = "";
+
+      if (tasks.length === 0) {
+        emptyMsg.style.display = "block";
+        count.textContent = "";
+        return;
+      }
+
+      emptyMsg.style.display = "none";
+      const remaining = tasks.filter(t => !t.done).length;
+      count.textContent = remaining + " remaining of " + tasks.length;
+
+      tasks.forEach((task, index) => {
+        const li = document.createElement("li");
+        if (task.done) li.classList.add("done");
+
+        const check = document.createElement("div");
+        check.className = "check";
+        check.addEventListener("click", () => toggleTask(index));
+
+        const title = document.createElement("span");
+        title.className = "title";
+        title.textContent = task.title;
+        title.addEventListener("click", () => toggleTask(index));
+
+        const del = document.createElement("button");
+        del.className = "delete";
+        del.textContent = "✕";
+        del.addEventListener("click", () => deleteTask(index));
+
+        li.append(check, title, del);
+        list.appendChild(li);
+      });
+    }
+
+    function addTask() {
+      const text = input.value.trim();
+      if (!text) return;
+      tasks.push({ title: text, done: false });
+      input.value = "";
+      save();
+      render();
+    }
+
+    function toggleTask(index) {
+      tasks[index].done = !tasks[index].done;
+      save();
+      render();
+    }
+
+    function deleteTask(index) {
+      tasks.splice(index, 1);
+      save();
+      render();
+    }
+
+    addBtn.addEventListener("click", addTask);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") addTask();
+    });
+
+    render();
+  </script>
+</body>
+</html>
